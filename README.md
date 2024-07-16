@@ -4,7 +4,7 @@
 
 We developed an interactive dashboard that analyzes usage metrics to provide data stewards and administrators with a comprehensive understanding of how users at their institution are interacting with the Informatics for Integrating Biology and the Bedside (i2b2) platform. This can help to identify strengths and limitations of the platform in general, as well as the current data representation supporting the local use case. It can thus serve as a communication aid for the dialog with users to identify potential areas for improvement in supporting efficient access to health data.
 
-We first identified data usage dimensions and relevant visualizations, which were then implemented by assessing and analyzing the metadata of previous user queries. The identified metrics include frequency of use, session duration, and use of functionality and features. These were implemented by analyzing the number of queries and users over time, frequently queried concepts, and query complexity. The visualizations were developed in Python and integrated into a Dash application to create an interactive dashboard.
+We first identified data usage dimensions and relevant visualizations, which were then implemented by assessing and analyzing the metadata of previous user queries. The dashboard provides an overview of the number of queries and users over time, frequently queried concepts, and query complexity. The visualizations were developed in Python and integrated into a Dash application to create an interactive dashboard.
 
 ## Contact
 
