@@ -6,6 +6,10 @@ We developed an interactive dashboard that analyzes usage metrics to provide dat
 
 We first identified data usage dimensions and relevant visualizations, which were then implemented by assessing and analyzing the metadata of previous user queries. The dashboard provides an overview of the number of queries and users over time, frequently queried concepts, and query complexity. The visualizations were developed in Python and integrated into a Dash application to create an interactive dashboard.
 
+## Deployment
+
+The dashboard itself is a Python application, where the dependencies are listed in the `requirements.txt`. We additionally provided example configuration files for docker compose in order to run the dashboard in a docker container. 
+
 ## Contact
 
 If you have questions or problems, please open an issue here on GitHub or contact us directly.
