@@ -1,0 +1,20 @@
+services:  
+  dashboard:
+    build: 
+      context: ./
+    container_name: dash-app-${INSTANCE_NUM}
+    hostname: dash-app
+    environment:
+     - PORT_DB
+     - POSTGRES_PW
+     - INSTANCE_NUM
+    restart: always
+    ports:
+      - 8050:8050
+    networks:
+      - dzone
+
+networks:
+    dzone:
+        external: true
+
