@@ -8,7 +8,7 @@ def run_dash_app():
     Function to run the Dash app as a subprocess.
     """
     return subprocess.Popen(
-        [sys.executable, 'i2b2-usage-dashboard-reload-test.py'],
+        [sys.executable, 'i2b2-usage-dashboard.py'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE
     )
