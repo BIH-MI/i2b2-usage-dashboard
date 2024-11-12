@@ -38,6 +38,97 @@ styles = {
 }
 
 #---------------------------------------------------------------------
+# Load data
+#---------------------------------------------------------------------
+
+if (LOCAL_DB_DUMP):
+    # Load database from local database dump file
+    con = sqlite3.connect("dbdump.db")
+    cur = con.cursor()
+    # Use a SQL query to load data into a Pandas DataFrame
+    query = "SELECT * FROM qt_query_master;"
+    df_qt_query_master = pd.read_sql_query(query, con)
+else:
+    # Load database from associated i2b2 database container
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PW")
+    PORT_DB = "5432"
+    db_user = 'postgres'
+    db_host = "i2b2-{}-db".format(os.getenv("INSTANCE_NUM"))
+    db_database = 'i2b2'
+    connection_url = f"postgresql://{db_user}:{POSTGRES_PASSWORD}@{db_host}:{PORT_DB}/{db_database}"
+    engine = create_engine(connection_url)
+    # Use a SQL query to load data into a Pandas DataFrame
+    query = "SELECT * FROM i2b2demodata.qt_query_master;"
+    df_qt_query_master = pd.read_sql_query(query, engine)
+
+#---------------------------------------------------------------------
+# Define time range slider
+#---------------------------------------------------------------------
+
+# Convert 'create_date'  to datetime format
+df_qt_query_master['create_date'] = pd.to_datetime(df_qt_query_master['create_date'], format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
+    
+# Define range by earliest and latest create_date
+range_start_date = df_qt_query_master['create_date'].min()
+range_end_date = df_qt_query_master['create_date'].max()
+
+# Calculate monthly marks
+def calculate_monthly_marks(range_start_date, range_end_date):
+    # Helper function to add months
+    def add_months(sourcedate, months):
+        return sourcedate + relativedelta(months=months)
+    
+    # Calculate number of months between start and end of the range (add 1, so queries in the last months are also available)
+    num_months_in_range = (range_end_date.year - range_start_date.year) * 12 + range_end_date.month - range_start_date.month + 1
+
+    # Define interval between labels
+    def determine_label_interval(n):
+        if n < 24: # For less than 2 years, set labels every month
+            return 1 
+        elif n < 36: # For less than 3 years, set labels every 2 months
+            return 2
+        elif n < 60: # For less than 5 years, set labels every 3 months
+            return 3
+        elif n < 120: # For less than 10 years, set labels every 6 months
+            return 6
+        elif n < 240: # For less than 20 years, set labels every 12 months
+            return 12
+        else: # For more than 20 years, set labels every 24 months
+            return 24
+    label_interval = determine_label_interval(num_months_in_range)
+
+    # Generate marks and their labels, and store associated dates
+    marks = {} # Generate marks for the slider 
+    date_values = {} # Store specific dates in addition to creating marks (as some have empty labels)
+    for i in range(num_months_in_range + 1):
+        month_date = add_months(range_start_date, i)
+        date_values[i] = month_date.strftime('%Y-%m')
+        # Only add label every `label_interval` months
+        if i % label_interval == 0:
+            # Add mark with a label
+            marks[i] = {'label': month_date.strftime('%Y-%m')} 
+        else:
+            # Add mark without a label
+            marks[i] = {'label': ''}
+    
+    # Return marks (i.e. markings on the range slider, with and without labels), date_values (associated dates for each mark), and num_months_in_range
+    return marks, date_values, num_months_in_range
+
+# Get marks, date_values and maximum range for the slider
+marks, date_values, max_range = calculate_monthly_marks(range_start_date, range_end_date)
+
+# RangeSlider configuration
+date_range_slider = dcc.RangeSlider(
+    id = 'date-range-slider', # Note: id needed, as value needs to be accessed as Input by update_analytics_time_range
+    min=0,
+    max=max_range,
+    step=1,
+    marks=marks,
+    value=[0, max_range],
+    pushable=1
+)
+
+#---------------------------------------------------------------------
 # Helper functions
 #---------------------------------------------------------------------
 
@@ -52,7 +143,7 @@ def compress_and_encode_dataframe(df):
 # Decode and decompress data
 def decode_and_decompress_dataframe(encoded_compressed_data):
     if encoded_compressed_data is None:
-        print("No data available1")
+        print("No data available")
     compressed = base64.b64decode(encoded_compressed_data)
     decompressed = gzip.decompress(compressed)
     json_str = decompressed.decode('utf-8')
@@ -139,19 +230,12 @@ auth = dash_auth.BasicAuth(
     VALID_USERNAME_PASSWORD_PAIRS
 )
 app.layout = dbc.Container([
-    dcc.Interval(
-        id='interval-component',
-        interval=24*60*60*1000,  # in milliseconds (24 hours)
-        n_intervals=0
-    ),
     dbc.Container([
         html.H1("i2b2 Usage Dimensions", **styles['header']),
         html.H5(id='selected-period-display', className='pb-3'),
-        dcc.Store(id='df-qt-query-master'),
-        dcc.Store(id='date-values-store'),
         dcc.Store(id='df-qt-query-master-filtered')
     ]),
-    dbc.Container(id='date-range-slider-container', **styles['container']),
+    date_range_slider,
     dcc.Loading(
         id="loading-overlay",
         fullscreen=True,
@@ -196,122 +280,6 @@ app.layout = dbc.Container([
 ], fluid=True)
 
 #---------------------------------------------------------------------
-# Load data
-#---------------------------------------------------------------------
-@app.callback(
-    Output('df-qt-query-master', 'data'),
-    [Input('interval-component', 'n_intervals')]
-)
-def load_data(n_intervals):
-
-    if (LOCAL_DB_DUMP):
-        # Load database from local database dump file
-        con = sqlite3.connect("dbdump.db")
-        cur = con.cursor()
-        # Use a SQL query to load data into a Pandas DataFrame
-        query = "SELECT * FROM qt_query_master;"
-        df_qt_query_master = pd.read_sql_query(query, con)
-    else:
-        # Load database from associated i2b2 database container
-        POSTGRES_PASSWORD = os.getenv("POSTGRES_PW")
-        PORT_DB = "5432"
-        db_user = 'postgres'
-        db_host = "i2b2-{}-db".format(os.getenv("INSTANCE_NUM"))
-        db_database = 'i2b2'
-        connection_url = f"postgresql://{db_user}:{POSTGRES_PASSWORD}@{db_host}:{PORT_DB}/{db_database}"
-        engine = create_engine(connection_url)
-        # Use a SQL query to load data into a Pandas DataFrame
-        query = "SELECT * FROM i2b2demodata.qt_query_master;"
-        df_qt_query_master = pd.read_sql_query(query, engine)
-
-    # Encode and compress dataframe
-    encoded_query_master = compress_and_encode_dataframe(df_qt_query_master)
-
-    return encoded_query_master
-
-#---------------------------------------------------------------------
-# Define time range slider
-#---------------------------------------------------------------------
-@app.callback(
-    [
-        Output('date-range-slider-container', 'children'),
-        Output('date-values-store', 'data')
-    ],
-    [
-        Input('df-qt-query-master', 'data')
-    ]
-)
-def define_time_range_slider(df_qt_query_master):
-    
-    # Decode and decompress
-    df_qt_query_master = decode_and_decompress_dataframe(df_qt_query_master)
-    
-    # Convert 'create_date'  to datetime format
-    df_qt_query_master['create_date'] = pd.to_datetime(df_qt_query_master['create_date'], format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
-        
-    # Define range by earliest and latest create_date
-    range_start_date = df_qt_query_master['create_date'].min()
-    range_end_date = df_qt_query_master['create_date'].max()
-
-    # Calculate monthly marks
-    def calculate_monthly_marks(range_start_date, range_end_date):
-        # Helper function to add months
-        def add_months(sourcedate, months):
-            return sourcedate + relativedelta(months=months)
-        
-        # Calculate number of months between start and end of the range (add 1, so queries in the last months are also available)
-        num_months_in_range = (range_end_date.year - range_start_date.year) * 12 + range_end_date.month - range_start_date.month + 1
-
-        # Define interval between labels
-        def determine_label_interval(n):
-            if n < 24: # For less than 2 years, set labels every month
-                return 1 
-            elif n < 36: # For less than 3 years, set labels every 2 months
-                return 2
-            elif n < 60: # For less than 5 years, set labels every 3 months
-                return 3
-            elif n < 120: # For less than 10 years, set labels every 6 months
-                return 6
-            elif n < 240: # For less than 20 years, set labels every 12 months
-                return 12
-            else: # For more than 20 years, set labels every 24 months
-                return 24
-        label_interval = determine_label_interval(num_months_in_range)
-
-        # Generate marks and their labels, and store associated dates
-        marks = {} # Generate marks for the slider 
-        date_values = {} # Store specific dates in addition to creating marks (as some have empty labels)
-        for i in range(num_months_in_range + 1):
-            month_date = add_months(range_start_date, i)
-            date_values[i] = month_date.strftime('%Y-%m')
-            # Only add label every `label_interval` months
-            if i % label_interval == 0:
-                # Add mark with a label
-                marks[i] = {'label': month_date.strftime('%Y-%m')} 
-            else:
-                # Add mark without a label
-                marks[i] = {'label': ''}
-        
-        # Return marks (i.e. markings on the range slider, with and without labels), date_values (associated dates for each mark), and num_months_in_range
-        return marks, date_values, num_months_in_range
-
-    # Get marks, date_values and maximum range for the slider
-    marks, date_values, max_range = calculate_monthly_marks(range_start_date, range_end_date)
-
-    # RangeSlider configuration
-    date_range_slider = dcc.RangeSlider(
-        id = 'date-range-slider', # Note: id needed, as value needs to be accessed as Input by update_analytics_time_range
-        min=0,
-        max=max_range,
-        step=1,
-        marks=marks,
-        value=[0, max_range],
-        pushable=1
-    )
-
-    return date_range_slider, date_values
-
-#---------------------------------------------------------------------
 # Update time range for analytics
 #---------------------------------------------------------------------
 @app.callback(
@@ -320,22 +288,14 @@ def define_time_range_slider(df_qt_query_master):
         Output('df-qt-query-master-filtered', 'data')
     ],
     [
-        Input('df-qt-query-master', 'data'),
-        Input('date-range-slider', 'value'),
-        Input('date-values-store', 'data')
+        Input('date-range-slider', 'value')
     ]
 )
-def update_analytics_time_range(df_qt_query_master, slider_range, date_values):
-
-    # Decode and decompress
-    df_qt_query_master = decode_and_decompress_dataframe(df_qt_query_master)
-    
-    # Convert 'create_date'  to datetime format
-    df_qt_query_master['create_date'] = pd.to_datetime(df_qt_query_master['create_date'], format='%Y-%m-%d %H:%M:%S.%f', errors='coerce')
+def update_analytics_time_range(slider_range):
 
     # Convert slider marks back to datetime
-    selected_start_date = pd.to_datetime(date_values[str(slider_range[0])])
-    selected_end_date = pd.to_datetime(date_values[str(slider_range[1])])
+    selected_start_date = pd.to_datetime(date_values[slider_range[0]])
+    selected_end_date = pd.to_datetime(date_values[slider_range[1]])
 
     # Display selected time period as text
     seleceted_period_display = f"Analytics for a time period between {selected_start_date.strftime('%Y-%m-%d')} and {selected_end_date.strftime('%Y-%m-%d')}"
@@ -1211,12 +1171,19 @@ def update_complexity_analytics_concept_touch(df_qt_query_master_filtered, activ
 
     return complexity_histograms, user_complexity_histograms, total_pages, active_page
 
+# if __name__ == '__main__':
+#     if LOCAL_ONLY:
+#         # for local only deployment
+#         app.run_server(debug=True)
+#     else:
+#         # for docker / prod deployment
+#         app.run_server(debug=False, host="0.0.0.0")
+
+
 if __name__ == '__main__':
     if LOCAL_ONLY:
         # for local only deployment
-        app.run_server(debug=True)
+        app.run_server(debug=False, use_reloader=False, port=8050)
     else:
         # for docker / prod deployment
-        app.run_server(debug=False, host="0.0.0.0")
-    
-
+        app.run_server(debug=False, use_reloader=False, host="0.0.0.0")
