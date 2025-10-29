@@ -1171,19 +1171,11 @@ def update_complexity_analytics_concept_touch(df_qt_query_master_filtered, activ
 
     return complexity_histograms, user_complexity_histograms, total_pages, active_page
 
-# if __name__ == '__main__':
-#     if LOCAL_ONLY:
-#         # for local only deployment
-#         app.run_server(debug=True)
-#     else:
-#         # for docker / prod deployment
-#         app.run_server(debug=False, host="0.0.0.0")
-
 
 if __name__ == '__main__':
     if LOCAL_ONLY:
         # for local only deployment
-        app.run_server(debug=False, use_reloader=False, port=8050)
+        app.run(debug=False, use_reloader=False, port=8050)
     else:
         # for docker / prod deployment
-        app.run_server(debug=False, use_reloader=False, host="0.0.0.0")
+        app.run(debug=False, use_reloader=False, host="0.0.0.0")
