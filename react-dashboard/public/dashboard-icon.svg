@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- same mark as on the login page: blue gradient square with the bar chart icon.
+       The icon paths are "chart-column" from Lucide (https://lucide.dev), ISC License:
+       Copyright (c) Lucide Icons and Contributors.
+       Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee
+       is hereby granted, provided that the above copyright notice and this permission notice appear in all copies. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2a78d6"/>
+      <stop offset="1" stop-color="#4a3aa7"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="14" fill="url(#bg)"/>
+  <!-- icon is drawn a bit larger than on the login page so it stays readable at tab size -->
+  <g transform="translate(7.8 7.8) scale(1.35)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 3v16a2 2 0 0 0 2 2h16"/>
+    <path d="M18 17V9"/>
+    <path d="M13 17V5"/>
+    <path d="M8 17v-3"/>
+  </g>
+</svg>

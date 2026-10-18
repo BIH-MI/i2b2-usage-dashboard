@@ -1,20 +1,54 @@
-services:  
-  dashboard:
-    build: 
-      context: ./
-    container_name: dash-app-${INSTANCE_NUM}
-    hostname: dash-app
+# the dashboard itself, connects to an existing i2b2 database (DB_HOST in .env).
+# to try it without i2b2, add docker-compose.demo.yml, see README
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: fastapi-backend-${INSTANCE_NUM:-01}
+    hostname: backend
     environment:
-     - PORT_DB
-     - POSTGRES_PW
-     - INSTANCE_NUM
+      - PORT_DB
+      - POSTGRES_PW=${I2B2_PG_PASS:-}
+      # DB_HOST, DB_USER and DB_NAME have no defaults and must be set in .env
+      - DB_HOST
+      - DB_USER
+      - DB_NAME
+      - I2B2_DATA_SCHEMA=${I2B2_DATA_SCHEMA:-i2b2demodata}
+      - I2B2_PM_SCHEMA=${I2B2_PM_SCHEMA:-i2b2pm}
+    secrets:
+      - jwt_secret
+    # dashboard users file (/data/users.json), the backend writes to it
+    volumes:
+      - dashboard-data:/data
+
+    restart: always
+    networks:
+      - i2b2-net
+
+  frontend:
+    build:
+      context: ./react-dashboard
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/}
+    container_name: react-frontend-${INSTANCE_NUM:-01}
+    hostname: frontend
     restart: always
     ports:
-      - 8050:8050
+      - 5174:80
+    depends_on:
+      - backend
     networks:
-      - dzone
+      - i2b2-net
 
 networks:
-    dzone:
-        external: true
+  i2b2-net:
+    name: i2b2-net
+    driver: bridge
 
+
+volumes:
+  dashboard-data:
+
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt

@@ -1,0 +1,186 @@
+:root {
+  --text: #4b5263;
+  --text-h: #111827;
+  --bg: #f3f5f9; /* soft gray-blue page, white cards sit on top of it */
+  --border: #e2e6ee;
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
+}
+
+/* dark mode: follows the OS setting by default, unless the in-app toggle (theme.jsx
+   ThemeProvider, stamps [data-theme] on <html>) picks explicitly - the :not() guard
+   lets an explicit light stamp win over a dark OS preference */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --text: #a3aab8;
+    --text-h: #e5e7eb;
+    --bg: #0f1117;
+    --border: #2a2f3a;
+  }
+
+}
+
+/* explicit toggle stamps [data-theme="dark"] - wins over a light OS preference too */
+:root[data-theme='dark'] {
+  --text: #a3aab8;
+  --text-h: #e5e7eb;
+  --bg: #0f1117;
+  --border: #2a2f3a;
+}
+
+/* chart icons (info, download) and the info box, a bit bigger on large screens */
+:root {
+  --icon-size: 18px;
+  --info-width: 240px;
+  --info-font: 0.78rem;
+}
+@media (min-width: 1800px) {
+  :root {
+    --icon-size: 21px;
+    --info-width: 300px;
+    --info-font: 0.85rem;
+  }
+}
+@media (min-width: 2400px) {
+  :root {
+    --icon-size: 24px;
+    --info-width: 360px;
+    --info-font: 0.95rem;
+  }
+}
+
+/* native buttons, inputs and scrollbars follow the in-app toggle, not the OS setting */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --control-bg: #fff;
+  --control-shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --control-hover: #2a78d6;
+  /* light blue wash at the top that fades into the gray page */
+  background: linear-gradient(180deg, #e3edfb 0, var(--bg) 380px) no-repeat, var(--bg);
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  /* faint blue glow at the top, same idea as the light theme */
+  background: linear-gradient(180deg, #14203a 0, var(--bg) 380px) no-repeat, var(--bg);
+  --control-bg: #171a21;
+  --control-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --control-hover: #3987e5;
+}
+
+/* the open calendar sits above the chart icons (z-index 20) and the sidebar (30), the library default is 1 */
+:root .react-datepicker-popper {
+  z-index: 40;
+}
+
+/* the open date picker calendar in dark mode, the library itself only ships a light look.
+   a step lighter than the cards and with a shadow, so it stands out from the page behind it */
+:root[data-theme='dark'] .react-datepicker {
+  background-color: #222836;
+  color: var(--text-h);
+  border-color: #353c4c;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+:root[data-theme='dark'] .react-datepicker__header {
+  background-color: #2b3243;
+  border-bottom-color: #353c4c;
+}
+:root[data-theme='dark'] .react-datepicker-popper .react-datepicker__triangle {
+  fill: #2b3243;
+  color: #2b3243;
+  stroke: #353c4c;
+}
+:root[data-theme='dark'] .react-datepicker__current-month,
+:root[data-theme='dark'] .react-datepicker__day {
+  color: var(--text-h);
+}
+:root[data-theme='dark'] .react-datepicker__day-name {
+  color: var(--text);
+}
+:root[data-theme='dark'] .react-datepicker__day:not([aria-disabled='true']):hover {
+  background-color: #3987e533;
+}
+:root[data-theme='dark'] .react-datepicker__day--selected,
+:root[data-theme='dark'] .react-datepicker__day--selected:not([aria-disabled='true']):hover {
+  background-color: #3987e5;
+  color: #fff;
+}
+:root[data-theme='dark'] .react-datepicker__day--keyboard-selected {
+  background-color: #3987e544;
+  color: var(--text-h);
+}
+:root[data-theme='dark'] .react-datepicker__day--disabled {
+  color: #4b5263;
+}
+:root[data-theme='dark'] .react-datepicker__year-select {
+  background-color: #222836;
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+/* rounded buttons and date fields instead of the plain browser look, colors come from the theme above */
+:root[data-theme] button,
+:root[data-theme] .react-datepicker__input-container input {
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--text-h);
+  background: var(--control-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.3rem 0.7rem;
+  box-shadow: var(--control-shadow);
+  cursor: pointer;
+}
+:root[data-theme] button:hover:not(:disabled) {
+  border-color: var(--control-hover);
+  color: var(--control-hover);
+}
+:root[data-theme] button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  width: 100%;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
