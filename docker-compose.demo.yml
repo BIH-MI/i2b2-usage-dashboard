@@ -1,0 +1,81 @@
+# demo with invented data, no i2b2 and no .env needed:
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+# then open http://localhost:5174 and log in as demo / demo1234
+# own project name and network, so containers, volumes and users stay apart from a real setup
+name: i2b2-usage-dashboard-demo
+
+services:
+  demo-db:
+    image: postgres:16-alpine
+    container_name: demo-db
+    hostname: demo-db
+    environment:
+      - POSTGRES_USER=demo
+      - POSTGRES_PASSWORD=demo1234
+      - POSTGRES_DB=i2b2
+    volumes:
+      - ./demo/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+      - demo-db-data:/var/lib/postgresql/data
+    ports:
+      - 5433:5432 # 5433 so it does not clash with a local postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d i2b2"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - i2b2-net
+
+  # copies the demo login into the users volume, only if no users exist yet
+  demo-users:
+    image: alpine:3.20
+    command: sh -c "[ -f /data/users.json ] || cp /demo/users.json /data/users.json"
+    volumes:
+      - ./demo/users.json:/demo/users.json:ro
+      - dashboard-data:/data
+
+  # creates a random session secret on the first start, so no secret is stored in the repository
+  demo-secret:
+    image: alpine:3.20
+    command: ["sh", "-c", "[ -s /secrets/jwt_secret ] || head -c 48 /dev/urandom | base64 > /secrets/jwt_secret"]
+    volumes:
+      - demo-secrets:/secrets
+
+  backend:
+    container_name: demo-backend
+    # reads the secret from the volume above instead of a file in the repository
+    secrets: !reset []
+    volumes:
+      - demo-secrets:/demo-secrets:ro
+    environment:
+      - SECRETS_DIR=/demo-secrets
+      - PORT_DB=5432
+      - POSTGRES_PW=demo1234
+      - DB_HOST=demo-db
+      - DB_USER=demo
+      - DB_NAME=i2b2
+      - I2B2_DATA_SCHEMA=i2b2demodata
+      - I2B2_PM_SCHEMA=i2b2pm
+    depends_on:
+      demo-db:
+        condition: service_healthy
+      demo-users:
+        condition: service_completed_successfully
+      demo-secret:
+        condition: service_completed_successfully
+
+  frontend:
+    container_name: demo-frontend
+    build:
+      args:
+        VITE_DEMO: "true"
+
+networks:
+  i2b2-net:
+    name: i2b2-demo-net
+
+volumes:
+  demo-db-data:
+  demo-secrets:
+
+secrets: !reset {}
